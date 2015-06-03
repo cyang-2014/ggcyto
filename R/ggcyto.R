@@ -37,18 +37,35 @@ ggcyto.default <- function(data = NULL, mapping = aes(), ...) {
   ggcyto.flowSet(fortify_fs(data, ...), mapping)
 }
 
-#' Draw ggcyto on current graphics device.
+
+
+#' Draw plot on current graphics device.
 #'
-#' A wrapper for print.ggplot. 
-#' @param x ggcyto object to display
+#' modified ggplot2::print.ggplot to dispatch data.table-optimized ggplot_build
+#' @param x plot to display
+#' @param newpage draw new (empty) page first?
+#' @param vp viewport to draw plot in
 #' @param ... other arguments not used by this method
+#' @keywords hplot
 #' @export
 #' @method print ggcyto
-print.ggcyto <- function(x, ...) {
+print.ggcyto <- function(x, newpage = is.null(vp), vp = NULL, ...) {
+  ggplot2:::set_last_plot(x)
+  if (newpage) grid.newpage()
   
-    #fortify plot data here instead
-    x <- as.ggplot(x)
-    ggplot2:::print.ggplot(x)
+  
+  data <- ggplot_build(x)
+  
+  gtable <- ggplot2:::ggplot_gtable(data)
+  if (is.null(vp)) {
+    grid.draw(gtable)
+  } else {
+    if (is.character(vp)) seekViewport(vp) else pushViewport(vp)
+    grid.draw(gtable)
+    upViewport()
+  }
+  
+  invisible(data)
 }
 
 #' It simply fortifies data and return a regular ggplot object.
@@ -61,6 +78,7 @@ print.ggcyto <- function(x, ...) {
 as.ggplot <- function(x){
 #   browser()
   x$data <- fortify(x$data)
+  class(x) <- c("gg", "ggplot")
   x
 }
 #' @rdname print.ggcyto
